@@ -2,53 +2,57 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Canım'ın Oyun Koleksiyonu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oyun Galerim</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            text-align: center;
-            margin: 0;
-            padding: 40px;
-        }
-
-        h1 {
-            margin-bottom: 40px;
-        }
-
-        .container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: white; text-align: center; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 50px; }
+        
+        /* Oyun Kartı Tasarımı */
         .card {
-            background: #1e293b;
-            padding: 20px 40px;
-            border-radius: 12px;
-            text-decoration: none;
-            color: white;
-            font-weight: bold;
-            transition: 0.2s;
+            background: #16213e;
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            width: 250px;
+            padding: 20px;
+            transition: transform 0.3s;
+            cursor: pointer;
         }
-
-        .card:hover {
-            background: #334155;
-            transform: scale(1.05);
+        .card:hover { transform: translateY(-10px); border-color: #e94560; }
+        
+        .card h3 { margin-top: 0; color: #e94560; }
+        .card p { font-size: 0.9em; color: #a2a2a2; }
+        
+        .play-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #e94560;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-<h1>Oyunlarım</h1>
+    <h1>🎮 Oyun Laboratuvarım</h1>
+    <p>Geliştirdiğim küçük oyunlar dünyasına hoş geldin!</p>
 
-<div class="container">
-    <a class="card" href="tavla.html">Oyun 1</a>
-    <a class="card" href="tavla2.html">Oyun 2</a>
-    <a class="card" href="oyun3.html">Oyun 3</a>
-</div>
+    <div class="container">
+        <div class="card" onclick="location.href='oyun1.html'">
+            <h3>Yılan Oyunu</h3>
+            <p>Klasik yılan oyunu. Bakalım ne kadar uzayabileceksin?</p>
+            <a href="oyun1.html" class="play-btn">Oyna</a>
+        </div>
+
+        <div class="card" onclick="location.href='oyun2.html'">
+            <h3>Uzay Savaşı</h3>
+            <p>Hızla gelen meteorlardan kaç ve hayatta kal!</p>
+            <a href="oyun2.html" class="play-btn">Oyna</a>
+        </div>
+    </div>
 
 </body>
 </html>
