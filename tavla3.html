@@ -19,7 +19,10 @@
   --gold: #d4a030;
 }
 
-html, body { height: 100%; overflow: hidden; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
 body {
   background: #0e0a06;
   color: var(--txt);
@@ -64,6 +67,23 @@ button.tiny:hover:not(:disabled) { background:var(--dim); color:var(--bg); }
 @keyframes blink { 50%{opacity:0} }
 .blink { animation:blink 1s infinite; }
 
+/* ── RESTORE BANNER (lobby) ── */
+#restore-banner {
+  display: none;
+  width: 100%;
+  background: rgba(212,160,48,.1);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  padding: 12px 14px;
+  flex-direction: column;
+  gap: 10px;
+}
+#restore-banner.show { display: flex; animation: fadeup .3s ease both; }
+.restore-row { display:flex; align-items:center; gap:8px; }
+.restore-code { font-size:14px; letter-spacing:.22em; font-weight:500; color:var(--gold); border:1px solid var(--gold); padding:2px 8px; border-radius:2px; }
+.restore-desc { font-size:10px; letter-spacing:.06em; color:var(--gold); }
+.restore-buts { display:flex; gap:7px; }
+
 #game {
   width: 100%;
   max-width: 1200px;
@@ -74,10 +94,9 @@ button.tiny:hover:not(:disabled) { background:var(--dim); color:var(--bg); }
 .gtop { width:100%; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 .gtitle { font-size:10px; letter-spacing:.22em; color:var(--dim); }
 
-.conn-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; transition:background .3s; }
-.conn-dot.ok   { background:#4caf50; box-shadow:0 0 6px #4caf5088; }
-.conn-dot.warn { background:var(--gold); box-shadow:0 0 6px var(--gold)88; animation:blink .8s infinite; }
-.conn-dot.bad  { background:var(--red); box-shadow:0 0 6px var(--red)88; animation:blink .5s infinite; }
+.conn-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+.conn-dot.ok  { background:#4caf50; box-shadow:0 0 6px #4caf5088; }
+.conn-dot.bad { background:var(--red); box-shadow:0 0 6px var(--red)88; animation:blink .6s infinite; }
 
 .pill { font-size:9px; letter-spacing:.14em; padding:4px 12px; border:1px solid var(--bord); transition:all .2s; }
 .pill.mine   { border-color:var(--gold); color:var(--gold); }
@@ -95,11 +114,11 @@ button.tiny:hover:not(:disabled) { background:var(--dim); color:var(--bg); }
 canvas { display:block; width:100%; cursor:pointer; touch-action:none; }
 canvas.dragging { cursor:grabbing; }
 
-/* Reconnect banner (inline, not overlay) */
+/* ── RECONNECT BANNER (in-game, inline) ── */
 #rc-banner {
   display: none;
   width: 100%;
-  background: rgba(192,57,43,.15);
+  background: rgba(192,57,43,.13);
   border: 1px solid var(--red);
   border-radius: 2px;
   padding: 8px 14px;
@@ -107,9 +126,13 @@ canvas.dragging { cursor:grabbing; }
   gap: 10px;
   flex-shrink: 0;
 }
-#rc-banner.show { display: flex; animation: fadeup .3s ease both; }
-.rc-banner-txt { font-size:10px; letter-spacing:.08em; color:var(--red); flex:1; }
-.rc-banner-buts { display:flex; gap:6px; }
+#rc-banner.show { display: flex; animation: fadeup .25s ease both; }
+.rc-left { display:flex; flex-direction:column; gap:3px; flex:1; min-width:0; }
+.rc-status { font-size:10px; letter-spacing:.08em; color:var(--red); }
+.rc-code-row { display:flex; align-items:center; gap:6px; }
+.rc-code-label { font-size:9px; letter-spacing:.1em; color:var(--dim); }
+.rc-code-val { font-size:13px; letter-spacing:.2em; font-weight:500; color:var(--gold); border:1px solid var(--gold); padding:1px 7px; border-radius:2px; background:rgba(212,160,48,.07); }
+.rc-buts { display:flex; gap:6px; flex-shrink:0; }
 
 @keyframes dieroll {
   0%  {transform:scale(1.1) rotate(-8deg);opacity:.6}
@@ -156,6 +179,19 @@ canvas.dragging { cursor:grabbing; }
 <!-- LOBBY -->
 <div id="lobby" class="scr on">
   <h1>tav<span>l</span>a</h1>
+
+  <!-- Session restore banner -->
+  <div id="restore-banner">
+    <div class="restore-row">
+      <span class="restore-code" id="restore-code">----</span>
+      <span class="restore-desc" id="restore-desc">devam eden oyun bulundu</span>
+    </div>
+    <div class="restore-buts">
+      <button class="red" id="btn-restore">Oyuna Dön</button>
+      <button class="tiny" id="btn-discard">Yeni Oyun</button>
+    </div>
+  </div>
+
   <div class="panels">
     <div class="panel">
       <div class="plabel">Yeni Oyun</div>
@@ -187,30 +223,34 @@ canvas.dragging { cursor:grabbing; }
     <span class="gtitle"><span class="conn-dot ok" id="conn-dot"></span>tavla</span>
     <span class="pill" id="pill">—</span>
   </div>
-  <!-- Reconnect banner -->
+
+  <!-- Inline reconnect banner -->
   <div id="rc-banner">
-    <span class="rc-banner-txt" id="rc-txt">bağlantı kesildi…</span>
-    <div class="rc-banner-buts">
-      <button id="btn-manual-rc" class="red" style="font-size:8px;padding:5px 10px">Yeniden Bağlan</button>
-      <button id="btn-give-up" style="font-size:8px;padding:5px 10px">Vazgeç</button>
+    <div class="rc-left">
+      <span class="rc-status" id="rc-status">bağlantı kesildi…</span>
+      <div class="rc-code-row">
+        <span class="rc-code-label">oda:</span>
+        <span class="rc-code-val" id="rc-code-val">----</span>
+      </div>
+    </div>
+    <div class="rc-buts">
+      <button id="btn-rc-now" class="red" style="font-size:8px;padding:5px 10px">Yeniden Bağlan</button>
+      <button id="btn-rc-quit" style="font-size:8px;padding:5px 10px">Vazgeç</button>
     </div>
   </div>
-  <!-- Opponent off -->
+
   <div class="off-bar">
     <div class="off-pips" id="off-opp-pips"></div>
     <span class="off-count" id="off-opp-cnt"></span>
   </div>
-  <!-- Board -->
   <div class="cvs-wrap" id="cvs-wrap">
     <canvas id="cvs"></canvas>
   </div>
   <div class="hint" id="hint">—</div>
-  <!-- My off -->
   <div class="off-bar">
     <div class="off-pips" id="off-my-pips"></div>
     <span class="off-count" id="off-my-cnt"></span>
   </div>
-  <!-- Controls -->
   <div class="gbot">
     <div class="dice" id="dice"></div>
     <div class="gbuts">
@@ -233,25 +273,62 @@ canvas.dragging { cursor:grabbing; }
 <script>
 "use strict";
 
-/* ════════════════════════════════════════
-   SCREEN
-════════════════════════════════════════ */
-function show(id){
-  ['lobby','game','end'].forEach(s=>document.getElementById(s).classList.toggle('on',s===id));
-  if(id==='game'){resizeCvs();render();}
-}
+/* ═══════════════════════════════════════════════════════════════
+   SESSION  (localStorage — survives F5 / tab close)
 
-/* ════════════════════════════════════════
-   STATE
-════════════════════════════════════════ */
+   KEY IDEA — host ID rotation:
+   PeerJS keeps a peer ID "alive" on its server for ~30-60 s after
+   the connection drops.  If the host refreshes immediately and
+   tries to reclaim the same ID it gets "unavailable-id".
+
+   Solution: append a generation suffix to the peer ID.
+     gen=0  →  roomCode          ("ABCD")
+     gen=1  →  roomCode + "-1"   ("ABCD-1")
+     gen=2  →  roomCode + "-2"   …
+
+   Both sides store hostGen in localStorage, so after a refresh
+   the guest dials the correct ID automatically.
+
+   roomCode  = the 4-char human-readable lobby code (never changes)
+   hostPeerId() = the actual PeerJS ID (changes with gen)
+═══════════════════════════════════════════════════════════════ */
+const SK = 'tavla_s1';
+
+function saveSess() {
+  if (!myColor || !S.board) return;
+  try {
+    localStorage.setItem(SK, JSON.stringify({
+      roomCode, isHost, myColor, hostGen,
+      state: dumpState(),
+      ts: Date.now()
+    }));
+  } catch(e){}
+}
+function loadSess() {
+  try {
+    const r = localStorage.getItem(SK);
+    if (!r) return null;
+    const s = JSON.parse(r);
+    if (Date.now() - s.ts > 30*60*1000) { clearSess(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+function clearSess() { try{ localStorage.removeItem(SK); }catch(e){} }
+
+/* ── globals ── */
 let myColor  = null;
 let peer     = null;
 let conn     = null;
 let voted    = false;
-let roomCode = null;
+let roomCode = null;   // 4-char lobby code shown to users
 let isHost   = false;
-let stateSeq = 0; // monotone counter — whoever has higher seq wins on sync
+let hostGen  = 0;      // generation counter for host peer ID
 
+function hostPeerId() {
+  return hostGen === 0 ? roomCode : roomCode + '-' + hostGen;
+}
+
+/* ── game state ── */
 const S = {
   board:null, bar:[0,0], off:[0,0],
   dice:[], used:[],
@@ -269,12 +346,22 @@ function resetState(){
   S.board=freshBoard(); S.bar=[0,0]; S.off=[0,0];
   S.dice=[]; S.used=[]; S.turn='white'; S.phase='roll';
   S.winner=null; S.sel=null; S.valid=[];
-  stateSeq=0;
+}
+function dumpState(){
+  return {board:[...S.board],bar:[...S.bar],off:[...S.off],
+          dice:[...S.dice],used:[...S.used],
+          turn:S.turn,phase:S.phase,winner:S.winner};
+}
+function loadState(s){
+  S.board=s.board;S.bar=s.bar;S.off=s.off;
+  S.dice=s.dice;S.used=s.used;
+  S.turn=s.turn;S.phase=s.phase;S.winner=s.winner;
+  S.sel=null;S.valid=[];
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    PEER CONFIG
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 const PEER_OPTS={
   debug:0,
   config:{iceServers:[
@@ -287,198 +374,190 @@ const PEER_OPTS={
   ]}
 };
 const CONN_OPTS={reliable:true,serialization:'json'};
-function newPeer(id){return id?new Peer(id,PEER_OPTS):new Peer(PEER_OPTS);}
+function mkPeer(id){ return id ? new Peer(id,PEER_OPTS) : new Peer(PEER_OPTS); }
 
-/* ════════════════════════════════════════
-   HEARTBEAT — keeps connection alive &
-   detects drops fast
-════════════════════════════════════════ */
-const HB_INTERVAL = 3000;  // send ping every 3s
-const HB_TIMEOUT  = 10000; // declare dead after 10s no pong
+/* ═══════════════════════════════════════
+   RECONNECT UI
+═══════════════════════════════════════ */
+const connDot   = document.getElementById('conn-dot');
+const rcBanner  = document.getElementById('rc-banner');
+const rcStatus  = document.getElementById('rc-status');
+const rcCodeVal = document.getElementById('rc-code-val');
 
-let hbSendTimer   = null;
-let hbDeadTimer   = null;
-let hbMissed      = 0;
+let rcActive   = false;
+let rcTimer    = null;   // retry interval
+let rcQuitTimer= null;   // 90s give-up
 
-function startHeartbeat(){
-  stopHeartbeat();
-  hbMissed = 0;
-  hbSendTimer = setInterval(()=>{
-    if(conn && conn.open){
-      tx({t:'ping', seq: stateSeq});
-      hbMissed++;
-      if(hbMissed >= 3) onDrop('heartbeat');
-    }
-  }, HB_INTERVAL);
-}
-
-function stopHeartbeat(){
-  if(hbSendTimer){ clearInterval(hbSendTimer); hbSendTimer=null; }
-  if(hbDeadTimer){ clearTimeout(hbDeadTimer);  hbDeadTimer=null; }
-  hbMissed=0;
-}
-
-function onPong(){
-  hbMissed=0; // reset on any pong
-  updateConnDot('ok');
-}
-
-/* ════════════════════════════════════════
-   RECONNECT
-════════════════════════════════════════ */
-const rcBanner   = document.getElementById('rc-banner');
-const rcTxt      = document.getElementById('rc-txt');
-const connDot    = document.getElementById('conn-dot');
-
-let rcTimeout    = null;
-let rcRetryTimer = null;
-let rcActive     = false;
-let lastDropReason = '';
-
-function updateConnDot(state){ // 'ok' | 'warn' | 'bad'
-  connDot.className = 'conn-dot ' + state;
-}
+function setDot(ok){ connDot.className = 'conn-dot ' + (ok ? 'ok' : 'bad'); }
 
 function showRcBanner(msg){
-  rcTxt.textContent = msg || 'bağlantı kesildi, yeniden bağlanıyor…';
+  rcStatus.textContent  = msg;
+  rcCodeVal.textContent = roomCode || '----';
   rcBanner.classList.add('show');
-  updateConnDot('bad');
+  setDot(false);
+}
+function setRcMsg(msg){
+  rcStatus.textContent  = msg;
+  rcCodeVal.textContent = roomCode || '----';
 }
 function hideRcBanner(){
   rcBanner.classList.remove('show');
   rcActive = false;
-  if(rcTimeout){ clearTimeout(rcTimeout); rcTimeout=null; }
-  if(rcRetryTimer){ clearInterval(rcRetryTimer); rcRetryTimer=null; }
-  updateConnDot('ok');
+  if(rcTimer)    { clearInterval(rcTimer);  rcTimer=null; }
+  if(rcQuitTimer){ clearTimeout(rcQuitTimer); rcQuitTimer=null; }
+  setDot(true);
 }
 
-document.getElementById('btn-give-up').onclick = ()=>location.reload();
-document.getElementById('btn-manual-rc').onclick = ()=>{
-  // Stop auto-retry, do it now
-  if(rcRetryTimer){ clearInterval(rcRetryTimer); rcRetryTimer=null; }
-  if(isHost) reinitHostPeer();
-  else attemptGuestReconnect();
+document.getElementById('btn-rc-quit').onclick = ()=>{ clearSess(); location.reload(); };
+document.getElementById('btn-rc-now').onclick  = ()=>{
+  if(rcTimer){ clearInterval(rcTimer); rcTimer=null; }
+  if(isHost) hostListen();
+  else       guestDial();
 };
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    CONNECTION HOOKS
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function hookConn(c){
   conn = c;
   c.on('data',  onData);
-  c.on('open',  onConnOpen);
+  c.on('open',  onOpen);
   c.on('close', ()=>onDrop('close'));
-  c.on('error', e=>onDrop('error:'+e.type));
+  c.on('error', e=>onDrop('err:'+e.type));
 }
 
-function onConnOpen(){
+function onOpen(){
   hideRcBanner();
-  hbMissed = 0;
-  startHeartbeat();
-  updateConnDot('ok');
+  setDot(true);
 }
 
+/* ═══════════════════════════════════════
+   DROP  — unified disconnect handler
+═══════════════════════════════════════ */
 function onDrop(reason){
-  if(rcActive) return; // already handling
+  if(rcActive) return;
   rcActive = true;
-  stopHeartbeat();
-  lastDropReason = reason || 'unknown';
+  setDot(false);
+  conn = null;  // stale referansı temizle
 
-  if(!document.getElementById('game').classList.contains('on')) return;
+  const inGame = document.getElementById('game').classList.contains('on') ||
+                 document.getElementById('end').classList.contains('on');
+  if(!inGame) return;
 
   hint('Bağlantı kesildi…','err');
-  updateConnDot('bad');
+  saveSess();
 
-  const msg = isHost ? 'Rakip bağlantısı kesildi, bekleniyor…' : 'Bağlantı kesildi, yeniden bağlanıyor…';
-  showRcBanner(msg);
-
-  // 90s global timeout
-  rcTimeout = setTimeout(()=>location.reload(), 90000);
+  rcQuitTimer = setTimeout(()=>{ saveSess(); location.reload(); }, 90000);
 
   if(isHost){
-    reinitHostPeer();
+    showRcBanner('Rakip bekleniyor…');
+    try{ if(peer && !peer.destroyed) peer.destroy(); }catch(e){}
+    peer = null;
+    hostListen();
   } else {
-    // Auto-retry every 3s, up to 25 times
-    let attempts = 0;
-    rcRetryTimer = setInterval(()=>{
-      if(!rcActive){ clearInterval(rcRetryTimer); return; }
-      if(conn && conn.open){ clearInterval(rcRetryTimer); return; }
-      if(attempts++ > 25){ clearInterval(rcRetryTimer); return; }
-      attemptGuestReconnect();
+    showRcBanner('Yeniden bağlanıyor…');
+    let n = 0;
+    guestDial();
+    rcTimer = setInterval(()=>{
+      if(!rcActive || (conn&&conn.open)){ clearInterval(rcTimer); return; }
+      if(++n > 28){ clearInterval(rcTimer); return; }
+      setRcMsg('Yeniden bağlanıyor… (' + n + '/28)');
+      guestDial();
     }, 3000);
-    // First attempt immediately
-    attemptGuestReconnect();
   }
 }
 
-/* Host: recreate peer with same roomCode ID so guest can always find it */
-function reinitHostPeer(){
-  // Destroy old conn, keep peer if possible
-  try{ if(conn) conn.close(); } catch(e){}
+/* ═══════════════════════════════════════
+   HOST LISTEN
+   ───────────────────────────────────────
+   On every reconnect attempt bump hostGen so
+   we request a fresh PeerJS ID (the old one
+   is still "reserved" on the signalling server
+   for up to 60 s after disconnect).
+   Save updated gen to localStorage so the
+   guest can dial the correct ID.
+═══════════════════════════════════════ */
+function hostListen(){
+  try{ if(conn) conn.close(); }catch(e){}
 
-  const tryListen = (attempt)=>{
+  const tryGen = (gen)=>{
     if(!rcActive) return;
-    let p = peer;
-    // If peer is broken, destroy and remake
-    if(!p || p.destroyed || p.disconnected){
-      try{ if(p) p.destroy(); }catch(e){}
-      p = newPeer(roomCode);
-      peer = p;
-      p.on('error', e=>{
-        if(attempt < 10) setTimeout(()=>tryListen(attempt+1), 2000);
-      });
-    } else {
-      // peer still alive — just re-attach listener
-      p.off('connection');
-    }
-    p.on('connection', c=>{
-      hookConn(c);
-      c.on('open',()=>{
-        hideRcBanner();
-        // Send full state so guest catches up
-        tx({t:'state', s:dumpState(), seq:stateSeq, full:true});
-        hint('Rakip yeniden bağlandı','hi');
-        refreshUI(); render();
+    hostGen = gen;
+    saveSess();  // guest reads this gen
+
+    // Destroy previous peer safely
+    try{ if(peer && !peer.destroyed) peer.destroy(); }catch(e){}
+    peer = null;
+
+    const pid = hostPeerId();
+    setRcMsg('Rakip bekleniyor… (oda: ' + roomCode + ')');
+
+    const p = mkPeer(pid);
+    peer = p;
+
+    p.on('error', e=>{
+      if(e.type === 'unavailable-id'){
+        setTimeout(()=>tryGen(gen+1), 1500);
+      } else {
+        setTimeout(()=>tryGen(gen), 2500);
+      }
+    });
+
+    p.on('open', ()=>{
+      p.on('connection', c=>{
+        hookConn(c);
+        c.on('open', ()=>{
+          hideRcBanner();
+          tx({t:'state', s:dumpState(), full:true});
+          hint('Rakip yeniden bağlandı','hi');
+          refreshUI(); render();
+        });
       });
     });
-    rcTxt.textContent = `Rakip bekleniyor… (deneme ${attempt})`;
   };
-  tryListen(1);
+
+  tryGen(hostGen + 1);  // always bump on reconnect
 }
 
-/* Guest: create fresh peer and connect to host's fixed ID */
-function attemptGuestReconnect(){
-  if(!rcActive && conn && conn.open) return;
+/* ═══════════════════════════════════════
+   GUEST DIAL
+   Reads hostGen from current globals
+   (restored from localStorage on page load).
+═══════════════════════════════════════ */
+function guestDial(){
+  // Önceki açık olmayan bağlantıyı kapat
+  try{ if(conn && !conn.open) conn.close(); }catch(e){}
+  conn = null;
 
-  try{ if(conn && !conn.open) conn.close(); } catch(e){}
-  // Reuse or recreate peer
-  const doConnect = (p)=>{
-    const c = p.connect(roomCode, CONN_OPTS);
+  const target = hostPeerId();
+
+  const dial = (p)=>{
+    const c = p.connect(target, CONN_OPTS);
     hookConn(c);
-    c.on('open',()=>{
+    c.on('open', ()=>{
       hideRcBanner();
-      // Ask host for latest state
       tx({t:'req-state'});
-      hint('Yeniden bağlandı','hi');
-      refreshUI(); render();
+      hint('Bağlandı, senkronize ediliyor…','hi');
     });
-    c.on('error',()=>{}); // handled by retry loop
+    c.on('error', ()=>{});  // retry döngüsü halleder
   };
 
+  // Peer varsa ve sağlıklıysa direkt bağlan
   if(peer && !peer.destroyed && !peer.disconnected){
-    doConnect(peer);
+    dial(peer);
   } else {
+    // Yeni peer aç
     try{ if(peer) peer.destroy(); }catch(e){}
-    const p = newPeer();
+    const p = mkPeer();
     peer = p;
-    p.on('error',()=>{});
-    p.on('open',()=>doConnect(p));
+    p.on('error', ()=>{});
+    p.on('open', ()=>dial(p));
   }
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    NETWORK
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function connReady(){
   cmsg('Bağlandı!','ok'); jmsg('Bağlandı!','ok');
   setTimeout(startGame, 500);
@@ -488,40 +567,27 @@ function tx(obj){
   if(conn && conn.open) try{ conn.send(obj); }catch(e){}
 }
 
+function syncState(){
+  tx({t:'state', s:dumpState()});
+  saveSess();
+}
+
 function onData(msg){
   switch(msg.t){
-    case 'ping':
-      // Reply with pong + our seq
-      tx({t:'pong', seq: stateSeq});
-      // If host has newer state, request it
-      if(isHost && msg.seq > stateSeq){
-        // shouldn't happen but be safe
-      }
-      break;
-
-    case 'pong':
-      onPong();
-      // If remote has a newer state than us, request it
-      if(msg.seq > stateSeq){
-        tx({t:'req-state'});
-      }
-      break;
-
     case 'req-state':
-      // Peer is asking for full state (after reconnect)
-      tx({t:'state', s:dumpState(), seq:stateSeq, full:true});
+      // Guest is asking for full state after reconnect
+      tx({t:'state', s:dumpState(), full:true});
       break;
 
     case 'state':
-      // Only apply if remote seq is >= ours (don't go backwards)
-      if(msg.seq !== undefined && msg.seq < stateSeq && !msg.full) break;
-      if(msg.seq !== undefined) stateSeq = msg.seq;
       loadState(msg.s);
+      saveSess();
       refreshUI(); render();
       break;
 
     case 'end':
       S.winner=msg.w; S.phase='end';
+      clearSess();
       goEnd(msg.w===myColor);
       break;
 
@@ -532,46 +598,113 @@ function onData(msg){
   }
 }
 
-/* ════════════════════════════════════════
-   LOBBY
-════════════════════════════════════════ */
-document.getElementById('btn-create').onclick=()=>{
-  const code=mkCode();
-  roomCode=code; isHost=true; myColor='white';
-  const p=newPeer(code); peer=p;
-  p.on('error',e=>{
+/* ═══════════════════════════════════════
+   LOBBY  +  SESSION RESTORE
+═══════════════════════════════════════ */
+function checkRestore(){
+  const s = loadSess();
+  if(!s) return;
+  document.getElementById('restore-code').textContent = s.roomCode;
+  document.getElementById('restore-desc').textContent =
+    'devam eden oyun — ' + (s.isHost ? 'ev sahibi' : 'misafir') + ' olarak oynuyordun';
+  document.getElementById('restore-banner').classList.add('show');
+}
+
+document.getElementById('btn-restore').onclick = ()=>{
+  const s = loadSess();
+  if(!s) return;
+  document.getElementById('restore-banner').classList.remove('show');
+
+  roomCode = s.roomCode;
+  isHost   = s.isHost;
+  myColor  = s.myColor;
+  hostGen  = s.hostGen || 0;
+  if(s.state) loadState(s.state);
+
+  voted = false;
+  document.getElementById('cvs-wrap').classList.toggle('flipped', myColor==='black');
+  show('game');
+  refreshUI(); updateOffBars(); render();
+
+  // Banner'ı hemen göster — kullanıcı ne olduğunu görsün
+  rcActive = true;
+  rcQuitTimer = setTimeout(()=>{ saveSess(); location.reload(); }, 90000);
+
+  if(isHost){
+    showRcBanner('Rakip bekleniyor…');
+    // peer tamamen destroy et, hostListen yeni peer açacak
+    try{ if(peer && !peer.destroyed) peer.destroy(); }catch(e){}
+    peer = null;
+    hostListen();
+  } else {
+    showRcBanner('Yeniden bağlanıyor…');
+    // Önce peer'ı temizle, sonra yeni peer aç ve bağlan
+    try{ if(peer && !peer.destroyed) peer.destroy(); }catch(e){}
+    peer = null;
+    conn = null;
+
+    const p = mkPeer();
+    peer = p;
+    p.on('error', ()=>{});
+    p.on('open', ()=>{
+      // İlk deneme
+      guestDial();
+      // Retry döngüsü
+      let n = 0;
+      rcTimer = setInterval(()=>{
+        if(!rcActive || (conn && conn.open)){ clearInterval(rcTimer); return; }
+        if(++n > 28){ clearInterval(rcTimer); return; }
+        setRcMsg('Yeniden bağlanıyor… (' + n + '/28)');
+        guestDial();
+      }, 3000);
+    });
+  }
+};
+
+document.getElementById('btn-discard').onclick = ()=>{
+  clearSess();
+  document.getElementById('restore-banner').classList.remove('show');
+};
+
+/* ── Create room ── */
+document.getElementById('btn-create').onclick = ()=>{
+  const code = mkCode();
+  roomCode = code; isHost = true; myColor = 'white'; hostGen = 0;
+  const p = mkPeer(code); peer = p;
+  p.on('error', e=>{
     cmsg('Hata: '+e.type,'err');
     if(e.type==='unavailable-id') setTimeout(()=>document.getElementById('btn-create').onclick(),400);
   });
-  p.on('open',id=>{
+  p.on('open', id=>{
     document.getElementById('btn-create').disabled=true;
     document.getElementById('create-more').style.display='flex';
     document.getElementById('mycode').textContent=id;
-    p.on('connection',c=>{ hookConn(c); if(c.open) connReady(); else c.on('open',connReady); });
+    p.on('connection', c=>{ hookConn(c); c.open?connReady():c.on('open',connReady); });
   });
 };
 
-document.getElementById('btn-join').onclick=doJoin;
-document.getElementById('codein').onkeydown=e=>{ if(e.key==='Enter') doJoin(); };
-document.getElementById('codein').oninput=e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''); };
+/* ── Join room ── */
+document.getElementById('btn-join').onclick = doJoin;
+document.getElementById('codein').onkeydown = e=>{ if(e.key==='Enter') doJoin(); };
+document.getElementById('codein').oninput   = e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''); };
 
 function doJoin(){
-  const code=document.getElementById('codein').value.trim().toUpperCase();
+  const code = document.getElementById('codein').value.trim().toUpperCase();
   if(!code) return;
-  roomCode=code; isHost=false; myColor='black';
+  roomCode = code; isHost = false; myColor = 'black'; hostGen = 0;
   jmsg('Bağlanıyor<span class="blink">…</span>');
   document.getElementById('btn-join').disabled=true;
-  const p=newPeer(); peer=p;
-  p.on('error',e=>{ jmsg('Hata: '+e.type,'err'); document.getElementById('btn-join').disabled=false; });
-  p.on('open',()=>{
-    const c=p.connect(code,CONN_OPTS); hookConn(c);
-    c.on('open',connReady);
-    c.on('error',e=>{ jmsg('Bağlanamadı ('+e.type+')','err'); document.getElementById('btn-join').disabled=false; });
-    setTimeout(()=>{ if(!c.open){ jmsg('Zaman aşımı — kodu kontrol et','err'); document.getElementById('btn-join').disabled=false; }},12000);
+  const p = mkPeer(); peer = p;
+  p.on('error', e=>{ jmsg('Hata: '+e.type,'err'); document.getElementById('btn-join').disabled=false; });
+  p.on('open', ()=>{
+    const c = p.connect(code, CONN_OPTS); hookConn(c);
+    c.on('open', connReady);
+    c.on('error', e=>{ jmsg('Bağlanamadı ('+e.type+')','err'); document.getElementById('btn-join').disabled=false; });
+    setTimeout(()=>{ if(!c.open){ jmsg('Zaman aşımı — kodu kontrol et','err'); document.getElementById('btn-join').disabled=false; }},10000);
   });
 }
 
-document.getElementById('btn-copy').onclick=()=>{
+document.getElementById('btn-copy').onclick = ()=>{
   navigator.clipboard.writeText(document.getElementById('mycode').textContent).catch(()=>{});
   document.getElementById('btn-copy').textContent='Kopyalandı';
   setTimeout(()=>document.getElementById('btn-copy').textContent='Kopyala',1600);
@@ -581,16 +714,79 @@ function cmsg(h,c){ const e=document.getElementById('cmsg'); e.innerHTML=h; e.cl
 function jmsg(h,c){ const e=document.getElementById('jmsg'); e.innerHTML=h; e.className='msg'+(c?' '+c:''); }
 function mkCode(){ const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:4},()=>a[Math.floor(Math.random()*a.length)]).join(''); }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
+   UNLOAD PROTECTION
+   Oyun ekranı açıkken ve oyun bitmemişken
+   tarayıcı "sayfadan ayrılmak istiyor musun?"
+   diyaloğunu göster.
+═══════════════════════════════════════ */
+function gameIsActive(){
+  // Oyun ekranı görünür mü?
+  if(!document.getElementById('game').classList.contains('on')) return false;
+  // Oyun başlamış mı (board var mı)?
+  if(!S.board || !myColor) return false;
+  // Oyun bitmemiş mi?
+  if(S.winner || S.phase==='end') return false;
+  return true;
+}
+
+window.addEventListener('beforeunload', e=>{
+  if(gameIsActive()){
+    saveSess();
+    e.preventDefault();
+    e.returnValue = 'Oyun devam ediyor. Sayfadan ayrılmak istediğine emin misin?';
+    return e.returnValue;
+  }
+});
+
+window.addEventListener('pagehide', ()=>{
+  if(gameIsActive()) saveSess();
+});
+
+/* ═══════════════════════════════════════
+   VISIBILITY  (mobil ekran kapat/aç — önlem 2)
+   Tab/app arka plandan öne gelince:
+   bağlantı hâlâ açıksa full state iste,
+   kapanmışsa yeniden bağlan akışını başlat.
+═══════════════════════════════════════ */
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.getElementById('game').classList.contains('on')) return;
+  if(document.hidden){
+    saveSess();
+  } else {
+    // Tab/app just became visible again
+    if(conn && conn.open){
+      // Connection survived — ask for fresh state to catch any missed moves
+      tx({t:'req-state'});
+      // Host should also push state so both sides are in sync
+      if(isHost) tx({t:'state', s:dumpState(), full:true});
+    } else if(!rcActive){
+      // Connection died while hidden — trigger reconnect
+      onDrop('visibility');
+    }
+  }
+});
+
+/* ═══════════════════════════════════════
+   SCREEN
+═══════════════════════════════════════ */
+function show(id){
+  ['lobby','game','end'].forEach(s=>document.getElementById(s).classList.toggle('on',s===id));
+  if(id==='game'){resizeCvs();render();}
+}
+
+/* ═══════════════════════════════════════
    GAME FLOW
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function startGame(){
   resetState(); voted=false;
   document.getElementById('cvs-wrap').classList.toggle('flipped', myColor==='black');
+  saveSess();
   show('game'); refreshUI(); updateOffBars();
 }
 
 function goEnd(won){
+  clearSess();
   setTimeout(()=>{
     show('end');
     const w=document.getElementById('endword');
@@ -606,7 +802,7 @@ document.getElementById('btn-rematch').onclick=()=>{
   document.getElementById('btn-rematch').disabled=true;
   document.getElementById('btn-rematch').textContent='Bekleniyor…';
 };
-document.getElementById('btn-home').onclick=()=>location.reload();
+document.getElementById('btn-home').onclick=()=>{ clearSess(); location.reload(); };
 
 function doRematch(){
   voted=false;
@@ -617,309 +813,210 @@ function doRematch(){
   startGame();
 }
 
-/* ════════════════════════════════════════
-   STATE SYNC — with sequence number
-════════════════════════════════════════ */
-function dumpState(){
-  return {
-    board:[...S.board], bar:[...S.bar], off:[...S.off],
-    dice:[...S.dice],   used:[...S.used],
-    turn:S.turn, phase:S.phase, winner:S.winner
-  };
-}
-function loadState(s){
-  S.board=s.board; S.bar=s.bar; S.off=s.off;
-  S.dice=s.dice;   S.used=s.used;
-  S.turn=s.turn;   S.phase=s.phase; S.winner=s.winner;
-  S.sel=null; S.valid=[];
-}
-
-/* Broadcast state — always bump seq */
-function syncState(){
-  stateSeq++;
-  tx({t:'state', s:dumpState(), seq:stateSeq});
-}
-
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    RULES
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 const DIR={white:-1,black:1};
-const isW  =c=>c==='white';
-const flip =c=>c==='white'?'black':'white';
-const bidx =c=>isW(c)?0:1;
-const myBI =()=>bidx(myColor);
+const isW=c=>c==='white', flip=c=>c==='white'?'black':'white';
+const bidx=c=>isW(c)?0:1, myBI=()=>bidx(myColor);
 const myBarCount=()=>S.bar[myBI()];
-const freeDice  =()=>S.dice.filter((_,i)=>!S.used[i]);
+const freeDice=()=>S.dice.filter((_,i)=>!S.used[i]);
 
 function canLand(pt,color){ const v=S.board[pt]; return isW(color)?v>=-1:v<=1; }
-
 function allHome(color){
-  if(S.bar[bidx(color)]>0) return false;
-  if(isW(color)){ for(let i=6;i<24;i++) if(S.board[i]>0) return false; }
-  else           { for(let i=0;i<18;i++) if(S.board[i]<0) return false; }
+  if(S.bar[bidx(color)]>0)return false;
+  if(isW(color)){for(let i=6;i<24;i++)if(S.board[i]>0)return false;}
+  else{for(let i=0;i<18;i++)if(S.board[i]<0)return false;}
   return true;
 }
 function furthestHome(color){
-  if(isW(color)){ for(let i=5;i>=0;i--)   if(S.board[i]>0) return i; }
-  else           { for(let i=18;i<=23;i++) if(S.board[i]<0) return i; }
+  if(isW(color)){for(let i=5;i>=0;i--)if(S.board[i]>0)return i;}
+  else{for(let i=18;i<=23;i++)if(S.board[i]<0)return i;}
   return -1;
 }
-function pipDist(idx,color){ return isW(color)?idx+1:24-idx; }
-
+function pipDist(idx,color){return isW(color)?idx+1:24-idx;}
 function barTargets(color){
   const uniq=[...new Set(freeDice())],out=[];
-  for(const d of uniq){
-    const to=isW(color)?24-d:d-1;
-    if(to>=0&&to<=23&&canLand(to,color)) out.push(to);
-  }
+  for(const d of uniq){const to=isW(color)?24-d:d-1;if(to>=0&&to<=23&&canLand(to,color))out.push(to);}
   return out;
 }
 function pointTargets(from,color){
   const d=DIR[color],uniq=[...new Set(freeDice())],out=[],bear=allHome(color);
   for(const die of uniq){
     const to=from+d*die;
-    if(to>=0&&to<=23){ if(canLand(to,color)) out.push(to); }
+    if(to>=0&&to<=23){if(canLand(to,color))out.push(to);}
     else if(bear){
       const pip=pipDist(from,color);
-      if(die===pip){ if(!out.includes('off')) out.push('off'); }
-      else if(die>pip&&from===furthestHome(color)){ if(!out.includes('off')) out.push('off'); }
+      if(die===pip){if(!out.includes('off'))out.push('off');}
+      else if(die>pip&&from===furthestHome(color)){if(!out.includes('off'))out.push('off');}
     }
   }
   return out;
 }
 function hasAnyMove(color){
-  if(S.bar[bidx(color)]>0) return barTargets(color).length>0;
-  for(let i=0;i<24;i++){
-    const v=S.board[i],mine=isW(color)?v>0:v<0;
-    if(mine&&pointTargets(i,color).length>0) return true;
-  }
+  if(S.bar[bidx(color)]>0)return barTargets(color).length>0;
+  for(let i=0;i<24;i++){const v=S.board[i],mine=isW(color)?v>0:v<0;if(mine&&pointTargets(i,color).length>0)return true;}
   return false;
 }
 function useDie(pips){
-  for(let i=0;i<S.dice.length;i++){
-    if(!S.used[i]&&S.dice[i]===pips){S.used[i]=true;return;}
-  }
+  for(let i=0;i<S.dice.length;i++){if(!S.used[i]&&S.dice[i]===pips){S.used[i]=true;return;}}
   const un=S.dice.map((v,i)=>({v,i})).filter(x=>!S.used[x.i]).sort((a,b)=>b.v-a.v);
-  if(un.length) S.used[un[0].i]=true;
+  if(un.length)S.used[un[0].i]=true;
 }
 function applyMove(from,to){
   const w=isW(myColor),idx=myBI();
-  if(from==='barW'||from==='barB') S.bar[idx]--;
+  if(from==='barW'||from==='barB')S.bar[idx]--;
   else S.board[from]-=w?1:-1;
-  if(to==='off'){ S.off[idx]++; }
+  if(to==='off'){S.off[idx]++;}
   else{
     const dest=S.board[to];
-    if((w&&dest===-1)||(!w&&dest===1)){
-      S.board[to]=0;
-      S.bar[bidx(flip(myColor))]++;
-    }
+    if((w&&dest===-1)||(!w&&dest===1)){S.board[to]=0;S.bar[bidx(flip(myColor))]++;}
     S.board[to]+=w?1:-1;
   }
   let pips;
-  if(from==='barW'||from==='barB') pips=w?24-to:to+1;
-  else if(to==='off')              pips=w?from+1:24-from;
-  else                             pips=Math.abs(to-from);
+  if(from==='barW'||from==='barB')pips=w?24-to:to+1;
+  else if(to==='off')pips=w?from+1:24-from;
+  else pips=Math.abs(to-from);
   useDie(pips);
-  S.sel=null; S.valid=[];
+  S.sel=null;S.valid=[];
   updateOffBars();
   if(S.off[idx]>=15){
-    S.phase='end'; S.winner=myColor;
-    syncState();
-    tx({t:'end',w:myColor});
-    goEnd(true); return;
+    S.phase='end';S.winner=myColor;
+    syncState(); tx({t:'end',w:myColor});
+    clearSess(); goEnd(true); return;
   }
   const more=freeDice().length>0&&hasAnyMove(myColor);
-  if(more){ syncState(); refreshUI(); render(); }
-  else    endTurn();
+  if(more){syncState();refreshUI();render();}else endTurn();
 }
 function endTurn(){
-  S.phase='roll'; S.dice=[]; S.used=[];
-  S.turn=flip(S.turn); S.sel=null; S.valid=[];
-  syncState();
-  refreshUI(); render();
+  S.phase='roll';S.dice=[];S.used=[];
+  S.turn=flip(S.turn);S.sel=null;S.valid=[];
+  syncState();refreshUI();render();
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    OFF BARS
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function updateOffBars(){
-  if(!myColor) return;
-  const myIdx=myBI(), oppIdx=bidx(flip(myColor)), isMeW=isW(myColor);
+  if(!myColor)return;
+  const myIdx=myBI(),oppIdx=bidx(flip(myColor)),isMeW=isW(myColor);
   renderPips('off-opp-pips','off-opp-cnt',S.off[oppIdx],!isMeW);
-  renderPips('off-my-pips', 'off-my-cnt', S.off[myIdx],  isMeW);
+  renderPips('off-my-pips','off-my-cnt',S.off[myIdx],isMeW);
 }
 function renderPips(pId,cId,count,white){
   const pe=document.getElementById(pId),ce=document.getElementById(cId);
-  pe.innerHTML='';
-  if(!count){ce.textContent='';return;}
-  for(let i=0;i<Math.min(count,15);i++){
-    const d=document.createElement('span');
-    d.className='off-pip '+(white?'w':'b');
-    pe.appendChild(d);
-  }
+  pe.innerHTML='';if(!count){ce.textContent='';return;}
+  for(let i=0;i<Math.min(count,15);i++){const d=document.createElement('span');d.className='off-pip '+(white?'w':'b');pe.appendChild(d);}
   ce.textContent=String(count);
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    CANVAS
-════════════════════════════════════════ */
-const cvs=document.getElementById('cvs');
-const ctx=cvs.getContext('2d');
-
+═══════════════════════════════════════ */
+const cvs=document.getElementById('cvs'),ctx=cvs.getContext('2d');
 function resizeCvs(){
   const wrap=document.getElementById('game');
-  const W=Math.min(wrap.clientWidth-20,1160);
-  const H=Math.round(W*0.62);
-  cvs.width=W*devicePixelRatio; cvs.height=H*devicePixelRatio;
-  cvs.style.width=W+'px'; cvs.style.height=H+'px';
+  const W=Math.min(wrap.clientWidth-20,1160),H=Math.round(W*0.62);
+  cvs.width=W*devicePixelRatio;cvs.height=H*devicePixelRatio;
+  cvs.style.width=W+'px';cvs.style.height=H+'px';
   ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
-window.addEventListener('resize',()=>{ if(document.getElementById('game').classList.contains('on')){resizeCvs();render();} });
-
-const CW=()=>cvs.width/devicePixelRatio;
-const CH=()=>cvs.height/devicePixelRatio;
-
+window.addEventListener('resize',()=>{if(document.getElementById('game').classList.contains('on')){resizeCvs();render();}});
+const CW=()=>cvs.width/devicePixelRatio,CH=()=>cvs.height/devicePixelRatio;
 function L(){
   const W=CW(),H=CH(),mg=Math.round(W*0.014),bw=Math.round(W*0.055);
   const pw=(W-bw-mg*2)/12,ph=(H/2-mg)*0.88,bx=mg+pw*6,mid=H/2;
   const avail=H/2-mg-6,r=Math.min(pw*0.44,avail/11);
   return{W,H,mg,bw,pw,ph,bx,mid,r};
 }
-function colX(col,l){ return col<6?l.mg+col*l.pw:l.mg+l.bw+col*l.pw; }
-function idxToCol(i){ return i>=12?i-12:11-i; }
-function idxCX(i,l){ return colX(idxToCol(i),l)+l.pw/2; }
-function isTop(i){ return i>=12; }
-function chkY(top,k,r,l){ const g=r*0.15; return top?l.mg+r+k*(r*2+g):l.H-l.mg-r-k*(r*2+g); }
-
+function colX(col,l){return col<6?l.mg+col*l.pw:l.mg+l.bw+col*l.pw;}
+function idxToCol(i){return i>=12?i-12:11-i;}
+function idxCX(i,l){return colX(idxToCol(i),l)+l.pw/2;}
+function isTop(i){return i>=12;}
+function chkY(top,k,r,l){const g=r*0.15;return top?l.mg+r+k*(r*2+g):l.H-l.mg-r-k*(r*2+g);}
 const drag={active:false,from:null,white:false,x:0,y:0};
 
 function render(){
-  if(!S.board) return;
-  const l=L();
-  const{W,H,mg,bw,pw,ph,bx,mid,r}=l;
-
-  ctx.fillStyle='#0e0a06'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#2c1f0e'; ctx.fillRect(mg,mg,W-mg*2,H-mg*2);
-  ctx.fillStyle='#241809'; ctx.fillRect(mg,mid-1,W-mg*2,2);
-  ctx.fillStyle='#1a1208'; ctx.fillRect(bx,mg,bw,H-mg*2);
-
+  if(!S.board)return;
+  const l=L();const{W,H,mg,bw,pw,ph,bx,mid,r}=l;
+  ctx.fillStyle='#0e0a06';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#2c1f0e';ctx.fillRect(mg,mg,W-mg*2,H-mg*2);
+  ctx.fillStyle='#241809';ctx.fillRect(mg,mid-1,W-mg*2,2);
+  ctx.fillStyle='#1a1208';ctx.fillRect(bx,mg,bw,H-mg*2);
   for(let i=0;i<24;i++){
     const col=idxToCol(i),top=isTop(i),x=colX(col,l);
     ctx.fillStyle=col%2===0?'#8b3a1a':'#0e0a06';
     ctx.beginPath();
     if(top){ctx.moveTo(x,mg);ctx.lineTo(x+pw,mg);ctx.lineTo(x+pw/2,mg+ph);}
-    else   {ctx.moveTo(x,H-mg);ctx.lineTo(x+pw,H-mg);ctx.lineTo(x+pw/2,H-mg-ph);}
-    ctx.closePath(); ctx.fill();
-    if(S.valid.includes(i)){
-      ctx.fillStyle='rgba(80,220,80,.55)'; ctx.fill();
-      ctx.strokeStyle='rgba(80,255,80,.9)'; ctx.lineWidth=2; ctx.stroke();
-    }
-    if(S.sel===i){
-      ctx.fillStyle='rgba(255,210,60,.55)'; ctx.fill();
-      ctx.strokeStyle='rgba(255,230,80,.9)'; ctx.lineWidth=2; ctx.stroke();
-    }
+    else{ctx.moveTo(x,H-mg);ctx.lineTo(x+pw,H-mg);ctx.lineTo(x+pw/2,H-mg-ph);}
+    ctx.closePath();ctx.fill();
+    if(S.valid.includes(i)){ctx.fillStyle='rgba(80,220,80,.55)';ctx.fill();ctx.strokeStyle='rgba(80,255,80,.9)';ctx.lineWidth=2;ctx.stroke();}
+    if(S.sel===i){ctx.fillStyle='rgba(255,210,60,.55)';ctx.fill();ctx.strokeStyle='rgba(255,230,80,.9)';ctx.lineWidth=2;ctx.stroke();}
   }
-
   for(let i=0;i<24;i++){
-    const v=S.board[i]; if(!v) continue;
+    const v=S.board[i];if(!v)continue;
     const top=isTop(i),cx=idxCX(i,l),abs=Math.abs(v);
     const n=(drag.active&&drag.from===i)?Math.min(abs,5)-1:Math.min(abs,5);
-    for(let k=0;k<n;k++) drawChecker(cx,chkY(top,k,r,l),r,v>0,(abs>5&&k===4)?abs:null);
+    for(let k=0;k<n;k++)drawChecker(cx,chkY(top,k,r,l),r,v>0,(abs>5&&k===4)?abs:null);
   }
-
   const bcx=bx+bw/2,br=Math.min(bw*0.44,r);
-  if(S.bar[0]>0){
-    const cnt=(drag.active&&drag.from==='barW')?Math.min(S.bar[0],3)-1:Math.min(S.bar[0],3);
-    for(let k=0;k<cnt;k++) drawChecker(bcx,mid-br*1.2-k*(br*2+br*0.15),br,true,(S.bar[0]>3&&k===2)?S.bar[0]:null);
-  }
-  if(S.bar[1]>0){
-    const cnt=(drag.active&&drag.from==='barB')?Math.min(S.bar[1],3)-1:Math.min(S.bar[1],3);
-    for(let k=0;k<cnt;k++) drawChecker(bcx,mid+br*1.2+k*(br*2+br*0.15),br,false,(S.bar[1]>3&&k===2)?S.bar[1]:null);
-  }
-
-  const wBarSel=S.sel==='barW'||drag.from==='barW';
-  const bBarSel=S.sel==='barB'||drag.from==='barB';
-  const barEsc=S.valid.includes('bar-esc');
+  if(S.bar[0]>0){const cnt=(drag.active&&drag.from==='barW')?Math.min(S.bar[0],3)-1:Math.min(S.bar[0],3);for(let k=0;k<cnt;k++)drawChecker(bcx,mid-br*1.2-k*(br*2+br*0.15),br,true,(S.bar[0]>3&&k===2)?S.bar[0]:null);}
+  if(S.bar[1]>0){const cnt=(drag.active&&drag.from==='barB')?Math.min(S.bar[1],3)-1:Math.min(S.bar[1],3);for(let k=0;k<cnt;k++)drawChecker(bcx,mid+br*1.2+k*(br*2+br*0.15),br,false,(S.bar[1]>3&&k===2)?S.bar[1]:null);}
+  const wBarSel=S.sel==='barW'||drag.from==='barW',bBarSel=S.sel==='barB'||drag.from==='barB',barEsc=S.valid.includes('bar-esc');
   if(wBarSel){ctx.fillStyle='rgba(255,210,60,.4)';ctx.fillRect(bx,mg,bw,mid-mg);}
   else if(barEsc&&myColor==='white'){ctx.fillStyle='rgba(80,220,80,.4)';ctx.fillRect(bx,mg,bw,mid-mg);}
   if(bBarSel){ctx.fillStyle='rgba(255,210,60,.4)';ctx.fillRect(bx,mid,bw,H/2-mg);}
   else if(barEsc&&myColor==='black'){ctx.fillStyle='rgba(80,220,80,.4)';ctx.fillRect(bx,mid,bw,H/2-mg);}
-
   if(S.valid.includes('off')||(drag.active&&S.valid.includes('off'))){
-    ctx.fillStyle='rgba(80,220,80,.35)';
-    ctx.fillRect(0,0,mg,H); ctx.fillRect(W-mg,0,mg,H);
-    ctx.fillStyle='rgba(80,255,80,.9)';
-    ctx.font=`bold ${Math.max(10,mg*0.6)}px DM Mono,monospace`;
-    const offRot=myColor==='black'?Math.PI/2:-Math.PI/2;
-    const offRotR=myColor==='black'?-Math.PI/2:Math.PI/2;
-    ctx.save();ctx.translate(mg/2,H/2);ctx.rotate(offRot);ctx.fillText('OFF',0,0);ctx.restore();
-    ctx.save();ctx.translate(W-mg/2,H/2);ctx.rotate(offRotR);ctx.fillText('OFF',0,0);ctx.restore();
+    ctx.fillStyle='rgba(80,220,80,.35)';ctx.fillRect(0,0,mg,H);ctx.fillRect(W-mg,0,mg,H);
+    ctx.fillStyle='rgba(80,255,80,.9)';ctx.font=`bold ${Math.max(10,mg*0.6)}px DM Mono,monospace`;
+    const or=myColor==='black'?Math.PI/2:-Math.PI/2,orr=myColor==='black'?-Math.PI/2:Math.PI/2;
+    ctx.save();ctx.translate(mg/2,H/2);ctx.rotate(or);ctx.fillText('OFF',0,0);ctx.restore();
+    ctx.save();ctx.translate(W-mg/2,H/2);ctx.rotate(orr);ctx.fillText('OFF',0,0);ctx.restore();
   }
-
   ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2;ctx.strokeRect(mg,mg,W-mg*2,H-mg*2);
   ctx.strokeStyle='#3a2810';ctx.lineWidth=1;ctx.strokeRect(bx,mg,bw,H-mg*2);
-
-  if(drag.active) drawChecker(drag.x,drag.y,r*1.1,drag.white,null);
+  if(drag.active)drawChecker(drag.x,drag.y,r*1.1,drag.white,null);
 }
-
 function drawChecker(cx,cy,r,white,label){
-  ctx.beginPath();ctx.arc(cx,cy+r*0.08,r,0,Math.PI*2);
-  ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fill();
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
-  ctx.fillStyle=white?'#e8dfc8':'#222222';ctx.fill();
-  ctx.beginPath();ctx.arc(cx,cy,r*0.75,0,Math.PI*2);
-  ctx.strokeStyle=white?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.12)';
-  ctx.lineWidth=1.5;ctx.stroke();
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
-  ctx.strokeStyle=white?'#b8a888':'#444444';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy+r*0.08,r,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle=white?'#e8dfc8':'#222222';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,r*0.75,0,Math.PI*2);ctx.strokeStyle=white?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.12)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle=white?'#b8a888':'#444444';ctx.lineWidth=1.5;ctx.stroke();
   if(label!=null){
-    ctx.save();
-    if(myColor==='black'){
-      ctx.translate(cx,cy);ctx.rotate(Math.PI);ctx.translate(-cx,-cy);
-    }
-    ctx.fillStyle=white?'#1a1208':'#e8dfc8';
-    ctx.font=`bold ${Math.max(9,r*.72)}px DM Mono,monospace`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(label,cx,cy);ctx.textBaseline='alphabetic';
-    ctx.restore();
+    ctx.save();if(myColor==='black'){ctx.translate(cx,cy);ctx.rotate(Math.PI);ctx.translate(-cx,-cy);}
+    ctx.fillStyle=white?'#1a1208':'#e8dfc8';ctx.font=`bold ${Math.max(9,r*.72)}px DM Mono,monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,cx,cy);ctx.textBaseline='alphabetic';ctx.restore();
   }
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    INPUT
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function canvasXY(e){
-  const rect=cvs.getBoundingClientRect();
-  const touch=e.touches?e.touches[0]:e;
-  let x=(touch.clientX-rect.left)*(CW()/rect.width);
-  let y=(touch.clientY-rect.top)*(CH()/rect.height);
-  if(myColor==='black'){x=CW()-x;y=CH()-y;}
-  return[x,y];
+  const rect=cvs.getBoundingClientRect(),touch=e.touches?e.touches[0]:e;
+  let x=(touch.clientX-rect.left)*(CW()/rect.width),y=(touch.clientY-rect.top)*(CH()/rect.height);
+  if(myColor==='black'){x=CW()-x;y=CH()-y;}return[x,y];
 }
-function flipCoords(clientX,clientY){
+function flipCoords(cx,cy){
   const rect=cvs.getBoundingClientRect();
-  let x=(clientX-rect.left)*(CW()/rect.width);
-  let y=(clientY-rect.top)*(CH()/rect.height);
-  if(myColor==='black'){x=CW()-x;y=CH()-y;}
-  return[x,y];
+  let x=(cx-rect.left)*(CW()/rect.width),y=(cy-rect.top)*(CH()/rect.height);
+  if(myColor==='black'){x=CW()-x;y=CH()-y;}return[x,y];
 }
-
 function hitTestFrom(mx,my,l){
   const{bx,bw,H,mid}=l;
   if(mx>=bx&&mx<=bx+bw){
-    if(my<mid&&myColor==='white'&&S.bar[0]>0) return'barW';
-    if(my>=mid&&myColor==='black'&&S.bar[1]>0) return'barB';
+    if(my<mid&&myColor==='white'&&S.bar[0]>0)return'barW';
+    if(my>=mid&&myColor==='black'&&S.bar[1]>0)return'barB';
     return null;
   }
-  const pt=pixelToIdx(mx,my,l);
-  if(pt===null) return null;
+  const pt=pixelToIdx(mx,my,l);if(pt===null)return null;
   const v=S.board[pt],mine=isW(myColor)?v>0:v<0;
   return mine&&myBarCount()===0?pt:null;
 }
 function startDrag(mx,my){
-  if(S.turn!==myColor||S.phase!=='move') return false;
-  const l=L(),from=hitTestFrom(mx,my,l);
-  if(from===null) return false;
+  if(S.turn!==myColor||S.phase!=='move')return false;
+  const l=L(),from=hitTestFrom(mx,my,l);if(from===null)return false;
   drag.active=true;drag.from=from;drag.x=mx;drag.y=my;drag.white=myColor==='white';
   if(from==='barW'||from==='barB'){S.sel=from;S.valid=[...barTargets(myColor),'bar-esc'];}
   else{S.sel=from;S.valid=pointTargets(from,myColor);}
@@ -927,39 +1024,29 @@ function startDrag(mx,my){
 }
 function moveDrag(mx,my){if(!drag.active)return;drag.x=mx;drag.y=my;render();}
 function endDrag(mx,my){
-  if(!drag.active)return;
-  drag.active=false;cvs.classList.remove('dragging');
+  if(!drag.active)return;drag.active=false;cvs.classList.remove('dragging');
   const l=L();const{mg,W,bx,bw}=l;
   if(S.valid.includes('off')&&(mx<mg||mx>W-mg)){applyMove(drag.from,'off');return;}
   if(mx>=bx&&mx<=bx+bw){S.sel=null;S.valid=[];render();return;}
   const pt=pixelToIdx(mx,my,l);
-  if(pt!==null&&S.valid.includes(pt)) applyMove(drag.from,pt);
+  if(pt!==null&&S.valid.includes(pt))applyMove(drag.from,pt);
   else{S.sel=null;S.valid=[];render();}
 }
-
 cvs.addEventListener('mousedown',e=>{e.preventDefault();const[mx,my]=canvasXY(e);startDrag(mx,my);});
 window.addEventListener('mousemove',e=>{if(!drag.active)return;const[x,y]=flipCoords(e.clientX,e.clientY);moveDrag(x,y);});
 window.addEventListener('mouseup',e=>{if(!drag.active)return;const[x,y]=flipCoords(e.clientX,e.clientY);endDrag(x,y);});
 cvs.addEventListener('touchstart',e=>{e.preventDefault();const[mx,my]=canvasXY(e);startDrag(mx,my);},{passive:false});
 cvs.addEventListener('touchmove',e=>{e.preventDefault();const[mx,my]=canvasXY(e);moveDrag(mx,my);},{passive:false});
-cvs.addEventListener('touchend',e=>{
-  e.preventDefault();
-  const t=e.changedTouches[0];
-  const[x,y]=flipCoords(t.clientX,t.clientY);
-  endDrag(x,y);
-},{passive:false});
+cvs.addEventListener('touchend',e=>{e.preventDefault();const t=e.changedTouches[0];const[x,y]=flipCoords(t.clientX,t.clientY);endDrag(x,y);},{passive:false});
 cvs.addEventListener('click',e=>{
-  if(drag.active)return;
-  if(S.turn!==myColor||S.phase!=='move')return;
+  if(drag.active)return;if(S.turn!==myColor||S.phase!=='move')return;
   const[mx,my]=canvasXY(e);onClick(mx,my);
 });
-
 function onClick(mx,my){
   const l=L();const{bx,bw,H,mid,mg,W}=l;
   if(S.valid.includes('off')&&(mx<mg||mx>W-mg)){applyMove(S.sel,'off');return;}
   if(mx>=bx&&mx<=bx+bw){
-    const key=my<mid?'barW':'barB';
-    const myKey=myColor==='white'?'barW':'barB';
+    const key=my<mid?'barW':'barB',myKey=myColor==='white'?'barW':'barB';
     if(key!==myKey)return;
     if(S.sel===myKey){S.sel=null;S.valid=[];}
     else if(myBarCount()>0){S.sel=myKey;S.valid=[...barTargets(myColor),'bar-esc'];}
@@ -969,108 +1056,57 @@ function onClick(mx,my){
   if(pt===null){if(S.valid.includes('off'))applyMove(S.sel,'off');return;}
   if(S.valid.includes(pt)){applyMove(S.sel,pt);return;}
   const v=S.board[pt],mine=isW(myColor)?v>0:v<0;
-  if(myBarCount()===0&&mine){
-    if(S.sel===pt){S.sel=null;S.valid=[];}
-    else{S.sel=pt;S.valid=pointTargets(pt,myColor);}
-  }else{S.sel=null;S.valid=[];}
-  render();
+  if(myBarCount()===0&&mine){if(S.sel===pt){S.sel=null;S.valid=[];}else{S.sel=pt;S.valid=pointTargets(pt,myColor);}}
+  else{S.sel=null;S.valid=[];}render();
 }
-
 function pixelToIdx(mx,my,l){
-  const{mg,bw,pw,bx,W,H}=l;
-  if(mx<mg||mx>W-mg)return null;
+  const{mg,bw,pw,bx,W,H}=l;if(mx<mg||mx>W-mg)return null;
   const top=my<H/2;let col;
-  if(mx<bx)         col=Math.floor((mx-mg)/pw);
-  else if(mx>bx+bw) col=Math.floor((mx-bx-bw)/pw)+6;
+  if(mx<bx)col=Math.floor((mx-mg)/pw);
+  else if(mx>bx+bw)col=Math.floor((mx-bx-bw)/pw)+6;
   else return null;
   if(col<0||col>11)return null;
-  const idx=top?col+12:11-col;
-  return idx>=0&&idx<=23?idx:null;
+  const idx=top?col+12:11-col;return idx>=0&&idx<=23?idx:null;
 }
 
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    UI
-════════════════════════════════════════ */
-const pillEl =document.getElementById('pill');
-const diceEl =document.getElementById('dice');
-const rollBtn=document.getElementById('btn-roll');
-
+═══════════════════════════════════════ */
+const pillEl=document.getElementById('pill'),diceEl=document.getElementById('dice'),rollBtn=document.getElementById('btn-roll');
 function refreshUI(){
   const mt=S.turn===myColor;
-  pillEl.textContent=mt?'senin sıran':'rakip oynuyor';
-  pillEl.className='pill '+(mt?'mine':'theirs');
+  pillEl.textContent=mt?'senin sıran':'rakip oynuyor';pillEl.className='pill '+(mt?'mine':'theirs');
   diceEl.innerHTML='';
-  S.dice.forEach((d,i)=>{
-    const el=document.createElement('div');
-    el.className='die '+(S.used[i]?'dead':'live');
-    el.textContent=d;diceEl.appendChild(el);
-  });
+  S.dice.forEach((d,i)=>{const el=document.createElement('div');el.className='die '+(S.used[i]?'dead':'live');el.textContent=d;diceEl.appendChild(el);});
   rollBtn.disabled=!(mt&&S.phase==='roll');
   hint(mt?(S.phase==='roll'?'zar at':myBarCount()>0?"bar'dan çık":'taş seç veya sürükle'):'rakip oynuyor…');
   updateOffBars();
 }
+function hint(text,cls){const el=document.getElementById('hint');el.textContent=text;el.className='hint'+(cls?' '+cls:'');}
 
-function hint(text,cls){
-  const el=document.getElementById('hint');
-  el.textContent=text;el.className='hint'+(cls?' '+cls:'');
-}
-
-/* ════════════════════════════════════════
+/* ═══════════════════════════════════════
    DICE
-════════════════════════════════════════ */
+═══════════════════════════════════════ */
 rollBtn.onclick=()=>{
   if(S.turn!==myColor||S.phase!=='roll')return;
-  rollBtn.disabled=true;
-  const ANIM=600,STEP=80;let elapsed=0;
+  rollBtn.disabled=true;const ANIM=600,STEP=80;let elapsed=0;
   diceEl.innerHTML='';
-  const tmp=[1,2].map(()=>{
-    const el=document.createElement('div');
-    el.className='die rolling';el.textContent=d6();diceEl.appendChild(el);return el;
-  });
+  const tmp=[1,2].map(()=>{const el=document.createElement('div');el.className='die rolling';el.textContent=d6();diceEl.appendChild(el);return el;});
   const iv=setInterval(()=>{
     elapsed+=STEP;tmp.forEach(el=>el.textContent=d6());
     if(elapsed>=ANIM){
       clearInterval(iv);tmp.forEach(el=>el.classList.remove('rolling'));
-      const a=d6(),b=d6();
-      S.dice=a===b?[a,a,a,a]:[a,b];
-      S.used=S.dice.map(()=>false);
-      S.phase='move';
-      diceEl.innerHTML='';
-      S.dice.forEach((d,i)=>{
-        const el=document.createElement('div');
-        el.className='die live';el.textContent=d;diceEl.appendChild(el);
-      });
-      if(!hasAnyMove(myColor)){
-        hint('hamle yok — pas geçiliyor…','hi');
-        syncState();
-        setTimeout(()=>endTurn(),1100);
-      } else {
-        syncState();
-        refreshUI();render();
-      }
+      const a=d6(),b=d6();S.dice=a===b?[a,a,a,a]:[a,b];S.used=S.dice.map(()=>false);S.phase='move';
+      diceEl.innerHTML='';S.dice.forEach((d,i)=>{const el=document.createElement('div');el.className='die live';el.textContent=d;diceEl.appendChild(el);});
+      if(!hasAnyMove(myColor)){hint('hamle yok — pas geçiliyor…','hi');syncState();setTimeout(()=>endTurn(),1100);}
+      else{syncState();refreshUI();render();}
     }
   },STEP);
 };
-
 function d6(){return Math.floor(Math.random()*6)+1;}
 
-/* ════════════════════════════════════════
-   VISIBILITY — pause heartbeat when hidden
-════════════════════════════════════════ */
-document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){
-    stopHeartbeat();
-  } else {
-    if(conn && conn.open){
-      startHeartbeat();
-      // Request fresh state in case we missed moves while hidden
-      tx({t:'req-state'});
-    } else if(document.getElementById('game').classList.contains('on')){
-      // Trigger reconnect if game is active
-      if(!rcActive) onDrop('visibility');
-    }
-  }
-});
+/* ── boot ── */
+checkRestore();
 </script>
 </body>
 </html>
