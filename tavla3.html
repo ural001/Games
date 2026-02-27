@@ -150,6 +150,29 @@ canvas.dragging { cursor:grabbing; }
 .die.dead { opacity:.18; }
 .gbuts { margin-left:auto; display:flex; gap:7px; }
 
+/* Zar At — aktifken dolgulu ve parlak */
+#btn-roll {
+  font-size: 11px;
+  padding: 12px 28px;
+  letter-spacing: .22em;
+  transition: background .15s, color .15s, box-shadow .15s, transform .1s;
+}
+#btn-roll:not(:disabled) {
+  background: var(--red);
+  color: var(--txt);
+  border-color: var(--red);
+  box-shadow: 0 0 16px rgba(192,57,43,.55);
+}
+#btn-roll:not(:disabled):hover {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  box-shadow: 0 0 24px rgba(192,57,43,.8);
+}
+#btn-roll:disabled {
+  opacity: .22;
+  box-shadow: none;
+}
+
 .hint { width:100%; font-size:9px; letter-spacing:.08em; color:var(--dim); text-align:center; height:14px; transition:color .15s; flex-shrink:0; }
 .hint.hi  { color:var(--gold); }
 .hint.err { color:var(--red); }
@@ -420,13 +443,18 @@ document.getElementById('btn-rc-now').onclick  = ()=>{
 ═══════════════════════════════════════ */
 function hookConn(c){
   conn = c;
-  c.on('data',  onData);
-  c.on('open',  onOpen);
-  c.on('close', ()=>onDrop('close'));
-  c.on('error', e=>onDrop('err:'+e.type));
+  c.on('data', onData);
+  c.on('open', ()=>onConnOpen(c));
+  // close/error sadece bu bağlantı hâlâ conn ise tetiklensin
+  // retry sırasında eski denemeler spurious onDrop yapmasın
+  c.on('close', ()=>{ if(conn===c) onDrop('close'); });
+  c.on('error', e=>{ if(conn===c) onDrop('err:'+e.type); });
 }
 
-function onOpen(){
+function onConnOpen(c){
+  // Birden fazla eşzamanlı deneme varsa sadece
+  // en son atanan conn geçerlidir
+  if(conn !== c) return;
   hideRcBanner();
   setDot(true);
 }
@@ -438,7 +466,6 @@ function onDrop(reason){
   if(rcActive) return;
   rcActive = true;
   setDot(false);
-  conn = null;  // stale referansı temizle
 
   const inGame = document.getElementById('game').classList.contains('on') ||
                  document.getElementById('end').classList.contains('on');
@@ -461,7 +488,7 @@ function onDrop(reason){
     rcTimer = setInterval(()=>{
       if(!rcActive || (conn&&conn.open)){ clearInterval(rcTimer); return; }
       if(++n > 28){ clearInterval(rcTimer); return; }
-      setRcMsg('Yeniden bağlanıyor… (' + n + '/28)');
+      setRcMsg('Yeniden bağlanıyor…');
       guestDial();
     }, 3000);
   }
@@ -483,14 +510,13 @@ function hostListen(){
   const tryGen = (gen)=>{
     if(!rcActive) return;
     hostGen = gen;
-    saveSess();  // guest reads this gen
+    saveSess();
 
-    // Destroy previous peer safely
     try{ if(peer && !peer.destroyed) peer.destroy(); }catch(e){}
     peer = null;
 
     const pid = hostPeerId();
-    setRcMsg('Rakip bekleniyor… (oda: ' + roomCode + ')');
+    setRcMsg('Rakip bekleniyor…');
 
     const p = mkPeer(pid);
     peer = p;
@@ -505,9 +531,11 @@ function hostListen(){
 
     p.on('open', ()=>{
       p.on('connection', c=>{
+        // hookConn open handler'ı hideRcBanner'ı çağıracak
         hookConn(c);
+        // Bağlantı açılınca state gönder ve UI güncelle
+        // onConnOpen zaten hideRcBanner yapıyor, burada sadece sync işi var
         c.on('open', ()=>{
-          hideRcBanner();
           tx({t:'state', s:dumpState(), full:true});
           hint('Rakip yeniden bağlandı','hi');
           refreshUI(); render();
@@ -516,7 +544,7 @@ function hostListen(){
     });
   };
 
-  tryGen(hostGen + 1);  // always bump on reconnect
+  tryGen(hostGen + 1);
 }
 
 /* ═══════════════════════════════════════
@@ -525,28 +553,23 @@ function hostListen(){
    (restored from localStorage on page load).
 ═══════════════════════════════════════ */
 function guestDial(){
-  // Önceki açık olmayan bağlantıyı kapat
-  try{ if(conn && !conn.open) conn.close(); }catch(e){}
-  conn = null;
-
   const target = hostPeerId();
 
   const dial = (p)=>{
     const c = p.connect(target, CONN_OPTS);
     hookConn(c);
+    // onConnOpen hideRcBanner'ı çağırır
+    // Bağlantı açılınca host'tan state iste
     c.on('open', ()=>{
-      hideRcBanner();
       tx({t:'req-state'});
       hint('Bağlandı, senkronize ediliyor…','hi');
     });
-    c.on('error', ()=>{});  // retry döngüsü halleder
+    c.on('error', ()=>{});
   };
 
-  // Peer varsa ve sağlıklıysa direkt bağlan
   if(peer && !peer.destroyed && !peer.disconnected){
     dial(peer);
   } else {
-    // Yeni peer aç
     try{ if(peer) peer.destroy(); }catch(e){}
     const p = mkPeer();
     peer = p;
@@ -654,7 +677,7 @@ document.getElementById('btn-restore').onclick = ()=>{
       rcTimer = setInterval(()=>{
         if(!rcActive || (conn && conn.open)){ clearInterval(rcTimer); return; }
         if(++n > 28){ clearInterval(rcTimer); return; }
-        setRcMsg('Yeniden bağlanıyor… (' + n + '/28)');
+        setRcMsg('Yeniden bağlanıyor…');
         guestDial();
       }, 3000);
     });
